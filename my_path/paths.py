@@ -1,0 +1,5 @@
+resource = '../resources/'
+infection_population = resource + 'infection-population/'
+infection_result = resource + 'infection-result/'
+population = resource + 'population/'
+scoring = resource + 'scoring_data/'

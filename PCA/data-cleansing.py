@@ -1,6 +1,5 @@
 import pandas as pd
 from os import walk
-import sys
 
 # temp = pd.read_excel('../resources/infection-result/서울.xlsx', nrows=0)
 # temp_columns = temp.columns
