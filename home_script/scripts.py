@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 from my_path import paths
 
-# # os.listdir()
-#
 # population = pd.read_csv(paths.population + 'my_population.csv', index_col=0, squeeze=True)
 # # print(population["대구"])
 #
@@ -31,21 +29,25 @@ from my_path import paths
 #     df["단계"] = score_list[index]["단계"]
 #     df.to_csv(area_name + "_비율.csv", index=False, encoding='euc-kr')
 #     df_list.append(df)
-#     index += 0
-# #
-# # full_df = pd.concat(df_list)
-# # print(full_df)
-# # full_df.to_csv("종합_비율.csv", index=False, encoding='euc-kr')
+#     index += 1
+#
+# full_df = pd.concat(df_list)
+# print(full_df)
+# full_df.to_csv("종합_비율.csv", index=False, encoding='euc-kr')
 
-df = pd.read_csv("group_by.csv", encoding='euc-kr')
+
+
+
+df = pd.read_csv("종합_비율.csv", encoding='euc-kr')
 stage = 0
 df_list = []
-new_df = pd.DataFrame(columns=["date", "avg_infect_ratio", "stage", "area"])
+new_df = pd.DataFrame(columns=["날짜", "해당조정단계_감염자비율", "조정단계", "지역"])
 for index, row in df.iterrows():
     pre_stage = stage
     stage = row['단계']
-    if pre_stage != 0 and pre_stage != stage:
-        temp = df.iloc[index - 7: index + 6, :]
+    if pre_stage != 0 and pre_stage != stage and df.iloc[index, :]["날짜"] != '2020-05-03':
+        # print(df.iloc[index - 1, :]["날짜"], df.iloc[index, :]["날짜"])
+        # print(pre_stage, stage)
         custom_row0 = [df.iloc[index - 1, :]["날짜"], df.iloc[index - 7: index - 1, :]["비율"].mean(), df.iloc[index - 1, :]['단계'],
                        df.iloc[index - 1, :]["지역"]]
         custom_row1 = [df.iloc[index, :]["날짜"], df.iloc[index: index + 6, :]["비율"].mean(), df.iloc[index, :]['단계'],
@@ -53,24 +55,21 @@ for index, row in df.iterrows():
         new_df.loc[len(new_df)] = custom_row0
         new_df.loc[len(new_df)] = custom_row1
 
-# print(new_df)
-for _, df in new_df.groupby(["area"]):
-    print(df)
-    df.to_csv(df.iloc[0, :]["area"] + "_avg.csv", index=False, encoding="euc-kr")
+for _, df in new_df.groupby(["지역"]):
+    # print(df)
+    df.to_csv(df.iloc[0, :]["지역"] + "_avg.csv", index=False, encoding="euc-kr")
 new_df.to_csv("avg_7day_areas_date_stage.csv", index=False, encoding="euc-kr")
-# very_new_df = pd.concat(df_list)
-# very_new_df.to_csv("very_new_df.csv", encoding='euc-kr', index=False)
-# print(very_new_df)
-# df.to_csv("group_by.csv", index=False, encoding='euc-kr')
-# ref = df.drop_duplicates(subset=['단계'])
-# print(ref)
+new_df.to_csv("avg_7day_areas_date_stage_utf-8.csv", index=False, encoding='utf-8')
 
-# new_df = df.groupby(['지역', '단계']).head(7)
-# new_df = new_df.loc[new_df['단계'] > 0.4]
-# print(new_df)
 
-# new_df.to_csv("group_by.csv", index=False, encoding='euc-kr')
-# test = new_df.groupby(np.arange(len(new_df.index))//7).mean()
-# test.to_csv("average.csv", index=False, encoding='euc-kr')
-# print(test)
-# df.drop_duplicates(subset=['지역', '단계'], inplace=True)
+
+df = pd.read_csv('avg_7day_areas_date_stage.csv', encoding='euc-kr')
+means = df['해당조정단계_감염자비율'].groupby(df.index // 2).mean()
+even = df.iloc[::2].copy() # even
+odd = df.iloc[1::2].copy() # odd
+odd['means'] = means.tolist()
+odd.drop(columns=['해당조정단계_감염자비율'], inplace=True)
+odd.rename(columns={"means": '해당조정단계_감염자비율'}, inplace=True)
+print(odd)
+data = odd.groupby(['조정단계', '지역']).mean()
+data.to_csv("fixed_avg_stage_areas.csv", encoding='euc-kr')
