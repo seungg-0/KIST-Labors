@@ -16,31 +16,31 @@ for city in city_name:
 
 card = pd.read_csv(card_file_dir, encoding='cp949', engine='python')  # 카드매출 파일 load
 card = card[['주차구분', '가맹점지역', '업종명_중분류', 'CNT_DAY_월', 'CNT_DAY_화', 'CNT_DAY_수', 'CNT_DAY_목', 'CNT_DAY_금', 'CNT_DAY_토', 'CNT_DAY_일']]
-card['주차구분'] = card['주차구분'].str.split(' ', expand=True)[2]  # '주차구분 column' 2020 1주차 20200101 -> 20200101 형태로 변환
-card['가맹점지역'] = card['가맹점지역'].str.split('_', expand=True)[0]  # '가맹점지역 column' 경기_가평군_가평읍 -> 경기 형태로 변환
-card = card[card.주차구분 >= '20200427']
+card['주차구분'] = card['주차구분'].str.split(' ', expand=True)[2]  # 주차구분column 2020 '1주차 20200101' -> '20200101' 형태로 변환
+card['가맹점지역'] = card['가맹점지역'].str.split('_', expand=True)[0]  # 가맹점지역column '경기_가평군_가평읍' -> '경기' 형태로 변환
+card = card[card.주차구분 >= '20200427'] # 20200427 이후 데이터만 남기기
 
-empty_data_dict = []
-for business_name in card_business_list:  # 카드 매출 전처리_업종별 데이터프레임 생성
+# 카드매출 전처리 (업종별 데이터프레임 생성)
+empty_data_dict = [] # 결측값 존재하는 업종_지역 제외하기 위한 리스트
+for business_name in card_business_list:  
     globals()[str(business_name)] = card[card.업종명_중분류 == business_name]
     globals()[str(business_name)] = globals()[str(business_name)][['주차구분', '가맹점지역', 'CNT_DAY_월', 'CNT_DAY_화', 'CNT_DAY_수', 'CNT_DAY_목', 'CNT_DAY_금', 'CNT_DAY_토', 'CNT_DAY_일']]
     for city in city_name:
         globals()['{}_{}'.format(business_name, city)] = globals()[str(business_name)][globals()[str(business_name)].가맹점지역 == city]
         globals()['{}_{}'.format(business_name, city)] = globals()['{}_{}'.format(business_name, city)][['주차구분', 'CNT_DAY_월', 'CNT_DAY_화', 'CNT_DAY_수', 'CNT_DAY_목', 'CNT_DAY_금', 'CNT_DAY_토', 'CNT_DAY_일']]
         globals()['{}_{}'.format(business_name, city)] = globals()['{}_{}'.format(business_name, city)].groupby('주차구분').sum()
-        if len((globals()['{}_{}'.format(business_name, city)])) < 40:
+        if len((globals()['{}_{}'.format(business_name, city)])) < 40: # 결측값 존재하는 업종_지역 제외하기 위한 구문
             empty_data_dict.append([business_name, city])
             continue
         globals()['{}_{}daily_CNT_list'.format(business_name, city)] = []
         globals()['{}_{}daily_CNT_list_matrix'.format(business_name, city)] = []
         for col_name in day_col_list:
             globals()['{}_{}daily_CNT_list_matrix'.format(business_name, city)].append(globals()['{}_{}'.format(business_name, city)][col_name].tolist())
-        for i in range(0, len(globals()['{}_{}'.format(business_name, city)])):
+        for i in range(0, len(globals()['{}_{}'.format(business_name, city)])): # (데이터 형태 : 요일이 칼럼으로, 행은 주단위 데이터) 일별 데이터를 추출하기 위한 구문 
             for k in range(0, 7):
                 globals()['{}_{}daily_CNT_list'.format(business_name, city)].append(globals()['{}_{}daily_CNT_list_matrix'.format(business_name, city)][k][i])
-        del globals()['{}_{}daily_CNT_list'.format(business_name, city)][0:6]
+        del globals()['{}_{}daily_CNT_list'.format(business_name, city)][0:6] # 조치 데이터와 길이 동일하게 해주는 구문
         del globals()['{}_{}daily_CNT_list'.format(business_name, city)][-1]
-        # print(city, business_name, len(globals()['{}_{}'.format(business_name, city)]))
 
 # 업종명에 '/'가 포함될 경우 변수 동적할탕 코드에서 에러 발생. -> '마트/할인점' 업종 별도 처리
 마트할인점 = card[card.업종명_중분류 == '마트/할인점']
@@ -62,10 +62,6 @@ for city in city_name:
             globals()['마트할인점_{}daily_CNT_list'.format(city)].append(globals()['마트할인점_{}daily_CNT_list_matrix'.format(city)][k][i])
     del globals()['마트할인점_{}daily_CNT_list'.format(city)][0:6]
     del globals()['마트할인점_{}daily_CNT_list'.format(city)][-1]
-    # print(globals()['마트할인점_{}daily_CNT_list'.format(city)])
-    # print(city, "마트할인점", len(globals()['마트할인점_{}'.format(city)]))
-
-
 
 # 업종명에 '/'가 포함될 경우 변수 동적할탕 코드에서 에러 발생. -> '커피/음료' 업종 별도 처리
 커피음료 = card[card.업종명_중분류 == '커피/음료']
@@ -87,10 +83,6 @@ for city in city_name:
             globals()['커피음료_{}daily_CNT_list'.format(city)].append(globals()['커피음료_{}daily_CNT_list_matrix'.format(city)][k][i])
     del globals()['커피음료_{}daily_CNT_list'.format(city)][0:6]
     del globals()['커피음료_{}daily_CNT_list'.format(city)][-1]
-    # print(globals()['커피음료_{}daily_CNT_list'.format(city)])
-    # print(city, "커피음료", len(globals()['커피음료_{}'.format(city)]))
-
-
 
 
 # '/'포함되어 별도 처리 해주었던 두 업좀(커피음료, 마트할인점)을 xcorr진행시에는 다른 업종들과 함께 한 번에 처리해주기 위한 리스트
@@ -101,7 +93,7 @@ for business_name in new_card_business_list:
         os.mkdir(result_dir)
     for city in city_name:
         if (((business_name == '놀이공원') and (city == '강원')) or ((business_name == '놀이공원') and (city == '경남')) or ((business_name == '놀이공원') and (city == '경북')) or ((business_name == '놀이공원') and (city == '광주')) or ((business_name == '놀이공원') and (city == '대전')) or ((business_name == '놀이공원') and (city == '부산')) or ((business_name == '놀이공원') and (city == '서울')) or ((business_name == '놀이공원') and (city == '울산')) or((business_name == '놀이공원') and (city == '전남')) or((business_name == '놀이공원') and (city == '전북')) or((business_name == '놀이공원') and (city == '충남')) or((business_name == '놀이공원') and (city == '충북')) or((business_name == '유흥') and (city == '부산')) or((business_name == '백화점') and (city == '강원')) or((business_name == '백화점') and (city == '경북')) or((business_name == '백화점') and (city == '인천')) or((business_name == '백화점') and (city == '전남')) or((business_name == '백화점') and (city == '전북')) or ((business_name == '백화점') and (city == '제주')) or ((business_name == '백화점') and (city == '충북')) or ((business_name == '면세점') and (city == '강원')) or((business_name == '면세점') and (city == '경기')) or ((business_name == '면세점') and (city == '경남')) or ((business_name == '면세점') and (city == '경북')) or((business_name == '면세점') and (city == '광주')) or((business_name == '면세점') and ('대구')) or((business_name == '면세점') and ('대전')) or((business_name == '면세점') and ('부산')) or((business_name == '면세점') and ('울산')) or((business_name == '면세점') and ('전남')) or((business_name == '면세점') and ('전북')) or((business_name == '면세점') and ('충남')) or((business_name == '면세점') and ('충북')) or((business_name == '쇼핑기타') and ('강원')) or((business_name == '쇼핑기타') and ('경기')) or((business_name == '쇼핑기타') and ('경남')) or((business_name == '쇼핑기타') and ('경북')) or((business_name == '쇼핑기타') and ('광주')) or((business_name == '쇼핑기타') and ('대구')) or((business_name == '쇼핑기타') and ('대전')) or((business_name == '쇼핑기타') and ('부산')) or((business_name == '쇼핑기타') and ('울산')) or((business_name == '쇼핑기타') and ('인천')) or((business_name == '쇼핑기타') and ('전남')) or((business_name == '쇼핑기타') and ('전북')) or((business_name == '쇼핑기타') and ('제주')) or((business_name == '쇼핑기타') and ('충남')) or((business_name == '쇼핑기타') and ('충북')) or((business_name == '아울렛') and ('강원')) or((business_name == '아울렛') and ('경기')) or((business_name == '아울렛') and ('광주')) or((business_name == '아울렛') and ('대전')) or((business_name == '아울렛') and ('부산')) or((business_name == '아울렛') and ('울산')) or((business_name == '아울렛') and ('전남')) or((business_name == '아울렛') and ('제주'))):
-            continue
+            continue # 결측값 제외
         else:
             y = globals()['{}_{}daily_CNT_list'.format(business_name, city)]
             x = globals()['x{}'.format(city)]['사적모임제한'].tolist()
@@ -113,9 +105,9 @@ for business_name in new_card_business_list:
                 yy.append((y[i + 1] - y[i]) / y[i])
             yy = np.array(yy)
             x = np.array(x)
-            x = (x - np.mean(x)) / (np.std(x) * len(x))
+            x = (x - np.mean(x)) / (np.std(x) * len(x)) # 벡터정규화
             yy = (yy - np.mean(yy)) / (np.std(yy))
-            yy = np.insert(yy, 0, 0, axis=0)
+            yy = np.insert(yy, 0, 0, axis=0) # x, y 길이 맞춰주기
             result = np.correlate(x, yy, mode='full')
             column_names = ["corr"]
             result = pd.DataFrame(result, columns=column_names)
